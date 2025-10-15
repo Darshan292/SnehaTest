@@ -146,7 +146,6 @@ const QuestionDetailPage: React.FC = () => {
         setQuestion({
           ...question,
           responses: [...question.responses, mappedNewResp],
-          // Fix: Update responseCount properly
           responseCount: question.responses.length + 1
         });
       }
@@ -435,7 +434,7 @@ const QuestionDetailPage: React.FC = () => {
                         )}
                       </div>
                       
-                      {response.credits && response.authorId !== user?.id && (
+                      {isQuestionOwner && question.status === 'open' && response.credits && response.authorId !== user?.id && (
                         <button
                           onClick={() => handlePayment(response)}
                           className="flex items-center px-4 py-2 bg-green-100 hover:bg-green-200 text-green-800 rounded-lg text-sm font-medium transition-colors"
@@ -490,6 +489,14 @@ const QuestionDetailPage: React.FC = () => {
                   </div>
                 )}
               </div>
+
+              {/* Solved Question Message */}
+              {question.status === 'solved' && (
+                <div className="p-6 text-center text-gray-500 dark:text-gray-400 bg-green-50 dark:bg-green-900/20 rounded-b-lg">
+                  <CheckCircle className="mx-auto h-12 w-12 text-green-500 mb-4" />
+                  <p>This question has been solved. No further payments can be made.</p>
+                </div>
+              )}
             </div>
 
             {/* Response Form */}

@@ -36,11 +36,11 @@ const paymentSchema = new mongoose.Schema({
     type: String,
     maxlength: [200, 'Description cannot exceed 200 characters']
   },
-  // transactionId: {
-  //   type: String,
-  //   unique: true,
-  //   required: true
-  // },
+  transactionId: {
+    type: String,
+    unique: true,
+    required: [true, 'Transaction ID is required']
+  },
   processedAt: {
     type: Date
   },
@@ -76,14 +76,6 @@ paymentSchema.pre(/^find/, function(next) {
     path: 'response',
     select: 'content'
   });
-  next();
-});
-
-// Generate unique transaction ID
-paymentSchema.pre('save', function(next) {
-  if (!this.transactionId) {
-    this.transactionId = `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
   next();
 });
 

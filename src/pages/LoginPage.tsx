@@ -177,11 +177,11 @@ const LoginPage: React.FC = () => {
                 </label>
               </div>
 
-              <div className="text-sm">
+              {/* <div className="text-sm">
                 <a href="#" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
                   Forgot your password?
                 </a>
-              </div>
+              </div> */}
             </div>
 
             <div>

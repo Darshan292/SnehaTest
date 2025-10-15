@@ -48,6 +48,11 @@ router.post('/', [
       return res.status(404).json({ message: 'Question not found' });
     }
 
+    // Check if question is already solved
+    if (question.status === 'solved') {
+      return res.status(400).json({ message: 'Cannot make payment for a solved question' });
+    }
+
     // Check if user is trying to pay themselves
     if (response.author._id.toString() === req.user.id) {
       return res.status(400).json({ message: 'Cannot pay yourself' });
@@ -98,6 +103,15 @@ router.post('/', [
       // Mark payment as completed
       await payment.markAsCompleted();
 
+      // Mark question as solved if not already solved
+      if (question.status !== 'solved') {
+        await question.markAsSolved(recipient._id);
+        await recipient.addNotification(
+          `Your response solved the question "${question.title}"!`,
+          'success'
+        );
+      }
+
       // Add notifications
       await recipient.addNotification(
         `You received ${amount} credits for your helpful response!`,
@@ -105,7 +119,7 @@ router.post('/', [
       );
 
       await payer.addNotification(
-        `Payment of ${amount} credits sent successfully to ${recipient.username}`,
+        `Payment of ${amount} credits sent successfully to ${recipient.username}. The question has been marked as solved.`,
         'info'
       );
 
@@ -113,6 +127,9 @@ router.post('/', [
       if (recipient.credits >= 100) {
         await recipient.addAchievement('Credit Collector', 'Earned 100+ credits');
       }
+
+      // Add achievement for solving a question
+      await recipient.addAchievement('Problem Solver', 'Had a response that solved a question');
 
       // Populate payment data
       await payment.populate([
@@ -129,10 +146,19 @@ router.post('/', [
         message: `Payment of ${amount} credits completed`
       });
 
+      // Emit event for question solved
+      if (question.status !== 'solved') {
+        io.emit('question-solved', {
+          questionId: question._id,
+          message: `Question "${question.title}" has been marked as solved`
+        });
+      }
+
       res.status(201).json({
         message: 'Payment processed successfully',
         payment,
-        newBalance: payer.credits
+        newBalance: payer.credits,
+        questionStatus: question.status
       });
 
     } catch (processError) {

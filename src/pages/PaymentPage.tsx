@@ -57,14 +57,12 @@ const PaymentPage: React.FC = () => {
     setProcessingPayment(true);
     
     try {
-      // Simulate API call for payment processing
-        console.log("Payment Data:", paymentData.amount); 
-        const payload = {
-        // questionId,
-        // responderId,
+      // Prepare payload with required fields
+      const payload = {
+        questionId,
+        responderId,
         responseId: paymentData.response.id, 
         amount: paymentData.amount,
-        // make sure response object has _id
       };
 
       const result = await ApiService.processPayment(payload);
@@ -77,10 +75,11 @@ const PaymentPage: React.FC = () => {
 
         setFlashMessage({
           type: 'success',
-          message: `Payment of ${paymentData.amount} credits sent successfully to ${paymentData.response.authorUsername}!`
+          message: `Payment of ${paymentData.amount} credits sent successfully to ${paymentData.response.authorUsername}! The question has been marked as solved.`
         });
 
-        navigate(`/question/${questionId}`, {
+        // Redirect to homepage
+        navigate('/dashboard', {
           state: { paymentSuccess: true }
         });
       } else {

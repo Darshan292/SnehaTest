@@ -86,9 +86,11 @@ questionSchema.virtual('responseCount', {
   count: true
 });
 
-// Virtual for net votes
+// Virtual for net votes with safe handling
 questionSchema.virtual('netVotes').get(function() {
-  return this.upvotes.length - this.downvotes.length;
+  const upvotesCount = Array.isArray(this.upvotes) ? this.upvotes.length : 0;
+  const downvotesCount = Array.isArray(this.downvotes) ? this.downvotes.length : 0;
+  return upvotesCount - downvotesCount;
 });
 
 // Indexes for better query performance
