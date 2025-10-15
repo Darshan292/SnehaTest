@@ -5,7 +5,6 @@ import { useApp } from '../contexts/AppContext';
 import Navbar from '../components/shared/Navbar';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 import Modal from '../components/shared/Modal';
-import api from '../services/api';
 import { 
   ArrowLeft, 
   User, 
@@ -15,10 +14,12 @@ import {
   CheckCircle,
   AlertCircle,
   ThumbsUp,
+  ThumbsDown,
   Award,
   Send
 } from 'lucide-react';
-import { dummyQuestions, Question, Response } from '../data/dummyData';
+import api from '../services/api';
+import { Question, Response } from '../types';
 
 const QuestionDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -27,6 +28,7 @@ const QuestionDetailPage: React.FC = () => {
   const navigate = useNavigate();
   
   const [question, setQuestion] = useState<Question | null>(null);
+  const [relatedQuestions, setRelatedQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [newResponse, setNewResponse] = useState('');
   const [responseCredits, setResponseCredits] = useState(0);
@@ -35,61 +37,136 @@ const QuestionDetailPage: React.FC = () => {
   const [selectedResponse, setSelectedResponse] = useState<Response | null>(null);
 
   useEffect(() => {
-    // Simulate API call to fetch question
-    const fetchQuestion = async () => {
+    const fetchData = async () => {
       setLoading(true);
       try {
-        const data = await api.getUserQuestions(user.id);
-        setQuestion(data);
-      } catch (err) {
-        console.error('Failed to fetch user questions', err);
-      }      
-      const foundQuestion = dummyQuestions.find(q => q.id === id);
-      if (foundQuestion) {
-        setQuestion(foundQuestion);
+        console.log('Fetching question with ID:', id); // Debug log
+        
+        const questionData = await api.getQuestion(id);
+        console.log('Received question data:', questionData); // Debug log
+        
+        // Check if questionData has the expected structure
+        if (!questionData || !questionData.question) {
+          console.error('Invalid question data structure:', questionData);
+          throw new Error('Invalid question data received');
+        }
+
+        const mappedQuestion: Question = {
+          id: questionData.question._id,
+          title: questionData.question.title,
+          description: questionData.question.description,
+          credits: questionData.question.credits,
+          authorId: questionData.question.author._id,
+          authorUsername: questionData.question.author.username,
+          responseCount: questionData.responses?.length || questionData.question.responseCount || 0,
+          createdAt: new Date(questionData.question.createdAt),
+          status: questionData.question.status,
+          responses: questionData.responses?.map((resp: any) => ({
+            id: resp._id,
+            questionId: questionData.question._id,
+            authorId: resp.author._id,
+            authorUsername: resp.author.username,
+            content: resp.content,
+            credits: resp.credits,
+            createdAt: new Date(resp.createdAt),
+            helpful: resp.isHelpful,
+            netVotes: resp.netVotes,
+            totalPayments: resp.totalPayments,
+          })) || [],
+          tags: questionData.question.tags,
+        };
+        
+        console.log('Mapped question:', mappedQuestion); // Debug log
+        setQuestion(mappedQuestion);
+
+        if (questionData) {
+          const questionsData = await api.getQuestions(); // Renamed for clarity
+          const allQuestions = questionsData.questions || questionsData || []; // Handle object or array response, fallback to []
+          const filteredRelated = allQuestions.filter((q: any) => 
+            q._id !== questionData.question._id && 
+            (q.tags?.some((tag: string) => questionData.question.tags?.includes(tag)) || 
+            q.title.toLowerCase().includes(questionData.question.title.toLowerCase().split(' ')[0]))
+          ).slice(0, 3);
+          const mappedRelated = filteredRelated.map((q: any) => ({
+            id: q._id,
+            title: q.title,
+            description: q.description,
+            credits: q.credits,
+            authorId: q.author._id,
+            authorUsername: q.author.username,
+            responseCount: q.responseCount,
+            createdAt: new Date(q.createdAt),
+            status: q.status,
+            responses: [],
+            tags: q.tags,
+          }));
+          setRelatedQuestions(mappedRelated);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        // setFlashMessage({
+        //   type: 'error',
+        //   message: 'Failed to load question details.'
+        // });
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
-    fetchQuestion();
-  }, [user]);
+    fetchData();
+  }, [id]);
 
   const handleResponseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newResponse.trim()) return;
+    if (!newResponse.trim() || !id) return;
 
     setSubmittingResponse(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const response: Response = {
-      id: Date.now().toString(),
-      questionId: question?.id || '',
-      authorId: user?.id || '',
-      authorUsername: user?.username || '',
-      content: newResponse,
-      credits: responseCredits || undefined,
-      createdAt: new Date(),
-      helpful: false,
-    };
+    try {
+      const responseData = {
+        content: newResponse,
+        questionId: id,
+        credits: question.credits || 0
+      };
+      const newRespData = await api.createResponse(responseData);
+      const newResp = newRespData.response;
+      const mappedNewResp: Response = {
+        id: newResp._id,
+        questionId: id,
+        authorId: user?.id || '',
+        authorUsername: user?.username || '',
+        content: newResponse,
+        credits: responseCredits,
+        createdAt: new Date(newResp.createdAt),
+        helpful: false,
+        netVotes: 0,
+      };
 
-    // Update question with new response
-    if (question) {
-      setQuestion({
-        ...question,
-        responses: [...question.responses, response]
+      if (question) {
+        setQuestion({
+          ...question,
+          responses: [...question.responses, mappedNewResp],
+          // Fix: Update responseCount properly
+          responseCount: question.responses.length + 1
+        });
+      }
+
+      setNewResponse('');
+      setResponseCredits(0);
+      
+      setFlashMessage({
+        type: 'success',
+        message: 'Your response has been posted successfully!'
       });
+    } catch (error) {
+      console.error('Error submitting response:', error);
+      setFlashMessage({
+        type: 'error',
+        message: 'Failed to post response.'
+      });
+    } finally {
+      setSubmittingResponse(false);
     }
-
-    setNewResponse('');
-    setResponseCredits(0);
-    setSubmittingResponse(false);
-    
-    setFlashMessage({
-      type: 'success',
-      message: 'Your response has been posted successfully!'
-    });
   };
 
   const handlePayment = (response: Response) => {
@@ -112,9 +189,10 @@ const QuestionDetailPage: React.FC = () => {
   };
 
   const markQuestionSolved = async () => {
-    if (question) {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+    if (!question?.id) return;
+
+    try {
+      await api.markQuestionSolved(question.id);
       
       setQuestion({
         ...question,
@@ -124,6 +202,60 @@ const QuestionDetailPage: React.FC = () => {
       setFlashMessage({
         type: 'success',
         message: 'Question marked as solved!'
+      });
+    } catch (error) {
+      console.error('Error marking question solved:', error);
+      setFlashMessage({
+        type: 'error',
+        message: 'Failed to mark question as solved.'
+      });
+    }
+  };
+
+  const handleMarkHelpful = async (respId: string) => {
+    try {
+      const updatedRespData = await api.markResponseHelpful(respId);
+      const updatedResp = updatedRespData.response;
+      
+      if (question) {
+        setQuestion({
+          ...question,
+          responses: question.responses.map(r => 
+            r.id === respId ? { ...r, helpful: updatedResp.isHelpful } : r
+          )
+        });
+      }
+      
+      setFlashMessage({
+        type: 'success',
+        message: 'Response marked as helpful!'
+      });
+    } catch (error) {
+      console.error('Error marking helpful:', error);
+      setFlashMessage({
+        type: 'error',
+        message: 'Failed to mark as helpful.'
+      });
+    }
+  };
+
+  const handleVote = async (respId: string, type: 'upvote' | 'downvote') => {
+    try {
+      const voteData = await api.voteOnResponse(respId, type);
+      
+      if (question) {
+        setQuestion({
+          ...question,
+          responses: question.responses.map(r => 
+            r.id === respId ? { ...r, netVotes: voteData.netVotes } : r
+          )
+        });
+      }
+    } catch (error) {
+      console.error('Error voting:', error);
+      setFlashMessage({
+        type: 'error',
+        message: 'Failed to vote.'
       });
     }
   };
@@ -273,7 +405,7 @@ const QuestionDetailPage: React.FC = () => {
               </div>
 
               <div className="divide-y divide-gray-200 dark:divide-gray-700">
-                {question.responses.map((response, index) => (
+                {question.responses.map((response) => (
                   <div key={response.id} className="p-6">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center">
@@ -321,10 +453,32 @@ const QuestionDetailPage: React.FC = () => {
                     </div>
 
                     <div className="flex items-center space-x-4">
-                      <button className="flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
+                      <button 
+                        onClick={() => handleVote(response.id, 'upvote')}
+                        className="flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                      >
                         <ThumbsUp className="w-4 h-4 mr-1" />
-                        Helpful
+                        Upvote
                       </button>
+                      <button 
+                        onClick={() => handleVote(response.id, 'downvote')}
+                        className="flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                      >
+                        <ThumbsDown className="w-4 h-4 mr-1" />
+                        Downvote
+                      </button>
+                      <span className="text-gray-500 dark:text-gray-400">
+                        Net Votes: {response.netVotes || 0}
+                      </span>
+                      {isQuestionOwner && !response.helpful && question.status === 'open' && (
+                        <button 
+                          onClick={() => handleMarkHelpful(response.id)}
+                          className="flex items-center text-green-500 hover:text-green-700 dark:text-green-400 dark:hover:text-green-200 transition-colors"
+                        >
+                          <CheckCircle className="w-4 h-4 mr-1" />
+                          Mark as Helpful
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -357,19 +511,6 @@ const QuestionDetailPage: React.FC = () => {
                   </div>
                   
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <label className="text-sm text-gray-600 dark:text-gray-400">
-                        Optional credits to request:
-                      </label>
-                      <input
-                        type="number"
-                        value={responseCredits}
-                        onChange={(e) => setResponseCredits(parseInt(e.target.value) || 0)}
-                        min="0"
-                        max="100"
-                        className="w-20 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-center dark:bg-gray-700 dark:text-white"
-                      />
-                    </div>
                     
                     <button
                       type="submit"
@@ -432,26 +573,21 @@ const QuestionDetailPage: React.FC = () => {
                 Related Questions
               </h3>
               <div className="space-y-3">
-                {dummyQuestions
-                  .filter(q => q.id !== question.id && 
-                    (q.tags?.some(tag => question.tags?.includes(tag)) || 
-                     q.title.toLowerCase().includes(question.title.toLowerCase().split(' ')[0])))
-                  .slice(0, 3)
-                  .map((relatedQ) => (
-                    <Link
-                      key={relatedQ.id}
-                      to={`/question/${relatedQ.id}`}
-                      className="block p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-                    >
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2">
-                        {relatedQ.title}
-                      </h4>
-                      <div className="flex items-center justify-between mt-2 text-xs text-gray-500 dark:text-gray-400">
-                        <span>{relatedQ.responses.length} responses</span>
-                        <span>{relatedQ.credits} credits</span>
-                      </div>
-                    </Link>
-                  ))}
+                {relatedQuestions.map((relatedQ) => (
+                  <Link
+                    key={relatedQ.id}
+                    to={`/question/${relatedQ.id}`}
+                    className="block p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    <h4 className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2">
+                      {relatedQ.title}
+                    </h4>
+                    <div className="flex items-center justify-between mt-2 text-xs text-gray-500 dark:text-gray-400">
+                      <span>{relatedQ.responseCount} responses</span>
+                      <span>{relatedQ.credits} credits</span>
+                    </div>
+                  </Link>
+                ))}
               </div>
             </div>
           </div>

@@ -36,11 +36,11 @@ const paymentSchema = new mongoose.Schema({
     type: String,
     maxlength: [200, 'Description cannot exceed 200 characters']
   },
-  transactionId: {
-    type: String,
-    unique: true,
-    required: true
-  },
+  // transactionId: {
+  //   type: String,
+  //   unique: true,
+  //   required: true
+  // },
   processedAt: {
     type: Date
   },

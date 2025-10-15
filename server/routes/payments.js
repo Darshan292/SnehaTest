@@ -1,5 +1,6 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
+const crypto = require('crypto'); // Built-in Node.js module
 const Payment = require('../models/Payment');
 const Response = require('../models/Response');
 const Question = require('../models/Question');
@@ -64,6 +65,10 @@ router.post('/', [
       return res.status(404).json({ message: 'Recipient not found' });
     }
 
+    // Generate unique transactionId using built-in crypto
+    const transactionId = crypto.randomUUID();
+    console.log('Generated transactionId:', transactionId); // Debug log to verify generation
+
     // Create payment record
     const payment = new Payment({
       from: req.user.id,
@@ -72,10 +77,12 @@ router.post('/', [
       question: response.question,
       response: responseId,
       description,
-      status: 'pending'
+      status: 'pending',
+      transactionId // Set the generated UUID
     });
 
     await payment.save();
+    console.log('Payment saved with ID:', payment._id); // Debug log to confirm save
 
     try {
       // Process the payment (deduct from payer, add to recipient)
@@ -135,11 +142,12 @@ router.post('/', [
     }
 
   } catch (error) {
-    console.error('Process payment error:', error);
-    res.status(500).json({ message: 'Payment processing failed' });
+    console.error('Process payment error:', error); // Enhanced logging
+    res.status(500).json({ message: error.message || 'Server error' });
   }
 });
 
+// The rest of the routes remain unchanged
 // @route   GET /api/payments
 // @desc    Get user's payment history
 // @access  Private

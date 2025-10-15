@@ -1,38 +1,73 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useApp } from '../contexts/AppContext';
 import Navbar from '../components/shared/Navbar';
-import { 
-  Trophy,
-  Medal,
-  Award,
-  User,
-  TrendingUp,
-  Calendar,
-  Filter,
-  Crown,
-  Star
-} from 'lucide-react';
-import { leaderboardData, LeaderboardUser } from '../data/dummyData';
+import LoadingSpinner from '../components/shared/LoadingSpinner';
+import apiService from '../services/api';
+import { Trophy, Medal, Award, User, TrendingUp, Calendar, ListFilter as Filter, Crown, Star } from 'lucide-react';
+
+interface LeaderboardUser {
+  _id: string;
+  username: string;
+  avatar?: string;
+  credits: number;
+  questionsAsked: number;
+  doubtsResolved: number;
+  rank: number;
+}
+
+interface LeaderboardStats {
+  totalUsers: number;
+  totalQuestions: number;
+  totalResponses: number;
+  totalCreditsCirculated: number;
+}
 
 const LeaderboardPage: React.FC = () => {
   const { user } = useAuth();
+  const { setFlashMessage } = useApp();
   const [timeFilter, setTimeFilter] = useState<'weekly' | 'monthly' | 'all-time'>('all-time');
   const [sortBy, setSortBy] = useState<'credits' | 'questions' | 'resolved'>('credits');
+  const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
+  const [stats, setStats] = useState<LeaderboardStats | null>(null);
+  const [currentUserRank, setCurrentUserRank] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const sortedLeaderboard = useMemo(() => {
-    return [...leaderboardData].sort((a, b) => {
-      switch (sortBy) {
-        case 'questions':
-          return b.questionsAsked - a.questionsAsked;
-        case 'resolved':
-          return b.doubtsResolved - a.doubtsResolved;
-        default:
-          return b.credits - a.credits;
-      }
-    }).map((user, index) => ({ ...user, rank: index + 1 }));
-  }, [sortBy]);
+  useEffect(() => {
+    fetchLeaderboard();
+    fetchStats();
+  }, [timeFilter, sortBy]);
 
-  const userRank = sortedLeaderboard.find(u => u.id === user?.id)?.rank || null;
+  const fetchLeaderboard = async () => {
+    try {
+      setLoading(true);
+      const data = await apiService.getLeaderboard({
+        period: timeFilter,
+        sortBy,
+        limit: 50
+      });
+      
+      setLeaderboard(data.leaderboard || []);
+      setCurrentUserRank(data.currentUserRank);
+    } catch (error) {
+      console.error('Error fetching leaderboard:', error);
+      setFlashMessage({
+        type: 'error',
+        message: 'Failed to load leaderboard. Please try again.'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchStats = async () => {
+    try {
+      const data = await apiService.getLeaderboardStats();
+      setStats(data.stats);
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -60,32 +95,17 @@ const LeaderboardPage: React.FC = () => {
     }
   };
 
-  const getTimeFilterData = () => {
-    // In a real app, this would filter based on actual time periods
-    // For demo purposes, we'll just return the same data with slight variations
-    switch (timeFilter) {
-      case 'weekly':
-        return sortedLeaderboard.map(user => ({
-          ...user,
-          credits: Math.floor(user.credits * 0.15), // Simulate weekly credits
-          questionsAsked: Math.floor(user.questionsAsked * 0.1),
-          doubtsResolved: Math.floor(user.doubtsResolved * 0.2)
-        }));
-      case 'monthly':
-        return sortedLeaderboard.map(user => ({
-          ...user,
-          credits: Math.floor(user.credits * 0.6), // Simulate monthly credits
-          questionsAsked: Math.floor(user.questionsAsked * 0.4),
-          doubtsResolved: Math.floor(user.doubtsResolved * 0.5)
-        }));
-      default:
-        return sortedLeaderboard;
-    }
-  };
+  const topThree = leaderboard.slice(0, 3);
+  const remaining = leaderboard.slice(3);
 
-  const displayData = getTimeFilterData();
-  const topThree = displayData.slice(0, 3);
-  const remaining = displayData.slice(3);
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <Navbar />
+        <LoadingSpinner size="lg" text="Loading leaderboard..." />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -103,13 +123,35 @@ const LeaderboardPage: React.FC = () => {
           <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
             Celebrating our top contributors who make the learning community thrive
           </p>
-          {userRank && (
+          {currentUserRank && (
             <div className="mt-4 inline-flex items-center px-4 py-2 bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 rounded-full">
               <Star className="w-4 h-4 mr-2" />
-              You're ranked #{userRank}
+              You're ranked #{currentUserRank}
             </div>
           )}
         </div>
+
+        {/* Stats Cards */}
+        {stats && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 text-center">
+              <div className="text-3xl font-bold text-blue-600 mb-2">{stats.totalUsers}</div>
+              <div className="text-gray-600 dark:text-gray-400">Total Users</div>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 text-center">
+              <div className="text-3xl font-bold text-green-600 mb-2">{stats.totalQuestions}</div>
+              <div className="text-gray-600 dark:text-gray-400">Questions Asked</div>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 text-center">
+              <div className="text-3xl font-bold text-purple-600 mb-2">{stats.totalResponses}</div>
+              <div className="text-gray-600 dark:text-gray-400">Responses Given</div>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 text-center">
+              <div className="text-3xl font-bold text-yellow-600 mb-2">{stats.totalCreditsCirculated}</div>
+              <div className="text-gray-600 dark:text-gray-400">Credits in Circulation</div>
+            </div>
+          </div>
+        )}
 
         {/* Filters */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
@@ -149,61 +191,63 @@ const LeaderboardPage: React.FC = () => {
         </div>
 
         {/* Top 3 Podium */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          {topThree.map((leader, index) => {
-            const actualRank = index + 1;
-            const isCurrentUser = leader.id === user?.id;
-            
-            return (
-              <div
-                key={leader.id}
-                className={`relative ${
-                  actualRank === 1 ? 'md:order-2' : actualRank === 2 ? 'md:order-1' : 'md:order-3'
-                } ${actualRank === 1 ? 'transform md:-translate-y-4' : ''}`}
-              >
-                <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden border-4 ${
-                  actualRank === 1 
-                    ? 'border-yellow-400' 
-                    : actualRank === 2 
-                    ? 'border-gray-400' 
-                    : 'border-amber-400'
-                } ${isCurrentUser ? 'ring-4 ring-blue-400' : ''}`}>
-                  {/* Rank Badge */}
-                  <div className={`text-center py-4 ${getRankBadgeColor(actualRank)}`}>
-                    <div className="flex items-center justify-center mb-2">
-                      {getRankIcon(actualRank)}
-                    </div>
-                    <div className="text-2xl font-bold">#{actualRank}</div>
-                  </div>
-
-                  {/* User Info */}
-                  <div className="p-6 text-center">
-                    <div className="w-16 h-16 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <User className="w-8 h-8 text-gray-600 dark:text-gray-300" />
-                    </div>
-                    
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                      {leader.username}
-                      {isCurrentUser && (
-                        <span className="ml-2 text-sm text-blue-600 dark:text-blue-400">(You)</span>
-                      )}
-                    </h3>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-center text-green-600 dark:text-green-400">
-                        <Trophy className="w-4 h-4 mr-2" />
-                        <span className="font-semibold">{leader.credits} credits</span>
+        {topThree.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            {topThree.map((leader, index) => {
+              const actualRank = index + 1;
+              const isCurrentUser = leader._id === user?.id;
+              
+              return (
+                <div
+                  key={leader._id}
+                  className={`relative ${
+                    actualRank === 1 ? 'md:order-2' : actualRank === 2 ? 'md:order-1' : 'md:order-3'
+                  } ${actualRank === 1 ? 'transform md:-translate-y-4' : ''}`}
+                >
+                  <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden border-4 ${
+                    actualRank === 1 
+                      ? 'border-yellow-400' 
+                      : actualRank === 2 
+                      ? 'border-gray-400' 
+                      : 'border-amber-400'
+                  } ${isCurrentUser ? 'ring-4 ring-blue-400' : ''}`}>
+                    {/* Rank Badge */}
+                    <div className={`text-center py-4 ${getRankBadgeColor(actualRank)}`}>
+                      <div className="flex items-center justify-center mb-2">
+                        {getRankIcon(actualRank)}
                       </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        {leader.questionsAsked} questions • {leader.doubtsResolved} resolved
+                      <div className="text-2xl font-bold">#{actualRank}</div>
+                    </div>
+
+                    {/* User Info */}
+                    <div className="p-6 text-center">
+                      <div className="w-16 h-16 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <User className="w-8 h-8 text-gray-600 dark:text-gray-300" />
+                      </div>
+                      
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                        {leader.username}
+                        {isCurrentUser && (
+                          <span className="ml-2 text-sm text-blue-600 dark:text-blue-400">(You)</span>
+                        )}
+                      </h3>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-center text-green-600 dark:text-green-400">
+                          <Trophy className="w-4 h-4 mr-2" />
+                          <span className="font-semibold">{leader.credits} credits</span>
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                          {leader.questionsAsked} questions • {leader.doubtsResolved} resolved
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Remaining Rankings */}
         {remaining.length > 0 && (
@@ -216,11 +260,11 @@ const LeaderboardPage: React.FC = () => {
             
             <div className="divide-y divide-gray-200 dark:divide-gray-700">
               {remaining.map((leader) => {
-                const isCurrentUser = leader.id === user?.id;
+                const isCurrentUser = leader._id === user?.id;
                 
                 return (
                   <div
-                    key={leader.id}
+                    key={leader._id}
                     className={`p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${
                       isCurrentUser ? 'bg-blue-50 dark:bg-blue-900/10 border-l-4 border-blue-400' : ''
                     }`}
@@ -278,6 +322,18 @@ const LeaderboardPage: React.FC = () => {
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {leaderboard.length === 0 && !loading && (
+          <div className="text-center py-12">
+            <Trophy className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              No leaderboard data available
+            </h3>
+            <p className="text-gray-500 dark:text-gray-400">
+              Be the first to ask questions and help others to appear on the leaderboard!
+            </p>
           </div>
         )}
 

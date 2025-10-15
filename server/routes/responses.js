@@ -10,6 +10,9 @@ const router = express.Router();
 // @route   POST /api/responses
 // @desc    Create a new response
 // @access  Private
+// @route   POST /api/responses
+// @desc    Create a new response
+// @access  Private
 router.post('/', [
   auth,
   body('content')
@@ -35,8 +38,12 @@ router.post('/', [
     const { content, questionId, credits = 0 } = req.body;
 
     // Check if question exists and is active
-    const question = await Question.findById(questionId);
-    if (!question || !question.isActive) {
+    const question = await Question.findOne({ 
+      _id: questionId, 
+      isActive: true 
+    }).populate('author', 'username');
+    
+    if (!question) {
       return res.status(404).json({ message: 'Question not found' });
     }
 
@@ -74,20 +81,27 @@ router.post('/', [
 
     // Notify question author
     const questionAuthor = await User.findById(question.author._id);
-    await questionAuthor.addNotification(
-      `New response to your question: ${question.title}`,
-      'info'
-    );
+    if (questionAuthor && questionAuthor._id.toString() !== req.user.id) {
+      await questionAuthor.addNotification(
+        `New response to your question: ${question.title}`,
+        'info'
+      );
+    }
 
-    // Populate response data
-    await response.populate('author', 'username avatar credits');
+    // Populate response data for return
+    await response.populate([
+      { path: 'author', select: 'username avatar credits' },
+      { path: 'question', select: 'title author' }
+    ]);
 
     // Emit real-time event
     const io = req.app.get('io');
-    io.to(`question-${questionId}`).emit('new-response', {
-      response: response.toJSON(),
-      questionId
-    });
+    if (io) {
+      io.to(`question-${questionId}`).emit('new-response', {
+        response: response.toJSON(),
+        questionId
+      });
+    }
 
     res.status(201).json({
       message: 'Response created successfully',
@@ -95,7 +109,7 @@ router.post('/', [
     });
   } catch (error) {
     console.error('Create response error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 

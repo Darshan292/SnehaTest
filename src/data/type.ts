@@ -21,6 +21,8 @@ export interface Response {
   credits?: number;
   createdAt: Date;
   helpful: boolean;
+  netVotes?: number;
+  totalPayments?: number;
 }
 
 export interface LeaderboardUser {

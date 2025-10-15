@@ -90,33 +90,57 @@ router.get('/', [
 // @route   GET /api/questions/:id
 // @desc    Get single question with responses
 // @access  Public
-router.get('/:id', optionalAuth, async (req, res) => {
+// In your question routes file
+// @route   GET /api/questions/:id
+// @desc    Get question by ID with responses
+// @access  Public
+router.get('/:id', async (req, res) => {
   try {
-    const question = await Question.findById(req.params.id)
-      .populate('responseCount');
+    console.log('Fetching question with ID:', req.params.id);
 
-    if (!question || !question.isActive) {
+    // Simple query without any population first
+    const question = await Question.findById(req.params.id);
+
+    if (!question) {
       return res.status(404).json({ message: 'Question not found' });
     }
 
-    // Increment views (only if not the author)
-    if (!req.user || req.user.id !== question.author._id.toString()) {
-      await question.incrementViews();
-    }
+    console.log('Raw question found:', question);
 
-    // Get responses for this question
-    const responses = await Response.find({ 
-      question: req.params.id, 
-      isActive: true 
-    }).sort({ isHelpful: -1, createdAt: -1 });
+    // Simple response query
+    const responses = await Response.find({ question: req.params.id });
+    
+    console.log('Raw responses found:', responses.length);
 
+    // Return minimal data structure
     res.json({
-      question,
-      responses
+      question: {
+        _id: question._id,
+        title: question.title,
+        description: question.description,
+        credits: question.credits,
+        status: question.status,
+        author: question.author, // This will be ObjectId, not populated
+        createdAt: question.createdAt,
+        responseCount: responses.length
+      },
+      responses: responses.map(r => ({
+        _id: r._id,
+        content: r.content,
+        author: r.author, // This will be ObjectId, not populated
+        createdAt: r.createdAt,
+        isHelpful: r.isHelpful,
+        credits: r.credits
+      }))
     });
+
   } catch (error) {
-    console.error('Get question error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Minimal route error:', error);
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error.message,
+      stack: error.stack
+    });
   }
 });
 

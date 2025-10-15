@@ -83,12 +83,27 @@ const responseSchema = new mongoose.Schema({
 
 // Virtual for net votes
 responseSchema.virtual('netVotes').get(function() {
-  return this.upvotes.length - this.downvotes.length;
+  try {
+    const upvotesLength = Array.isArray(this.upvotes) ? this.upvotes.length : 0;
+    const downvotesLength = Array.isArray(this.downvotes) ? this.downvotes.length : 0;
+    return upvotesLength - downvotesLength;
+  } catch (error) {
+    console.error('NetVotes virtual error:', error);
+    return 0;
+  }
 });
 
 // Virtual for total payments received
 responseSchema.virtual('totalPayments').get(function() {
-  return this.payments.reduce((total, payment) => total + payment.amount, 0);
+  try {
+    if (!Array.isArray(this.payments)) return 0;
+    return this.payments.reduce((total, payment) => {
+      return total + (payment && payment.amount ? payment.amount : 0);
+    }, 0);
+  } catch (error) {
+    console.error('TotalPayments virtual error:', error);
+    return 0;
+  }
 });
 
 // Indexes for better query performance
@@ -98,15 +113,25 @@ responseSchema.index({ isHelpful: 1 });
 
 // Middleware to populate author and question info
 responseSchema.pre(/^find/, function(next) {
-  this.populate({
-    path: 'author',
-    select: 'username avatar credits'
-  }).populate({
-    path: 'question',
-    select: 'title author'
-  });
-  next();
+  try {
+    this.populate({
+      path: 'author',
+      select: 'username avatar credits'
+    }).populate({
+      path: 'question',
+      select: 'title author'
+    });
+    next();
+  } catch (error) {
+    console.error('Response pre-middleware error:', error);
+    next(error);
+  }
 });
+
+// Add error handling to virtual getters
+
+
+
 
 // Method to check if user can edit this response
 responseSchema.methods.canEdit = function(userId) {

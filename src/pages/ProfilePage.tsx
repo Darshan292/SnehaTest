@@ -1,23 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useApp } from '../contexts/AppContext';
 import Navbar from '../components/shared/Navbar';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
-import { 
-  User,
-  Mail,
-  Calendar,
-  Award,
-  MessageCircle,
-  DollarSign,
-  Edit3,
-  Save,
-  X,
-  TrendingUp,
-  CheckCircle,
-  Clock
-} from 'lucide-react';
-import { dummyQuestions } from '../data/dummyData';
+import apiService from '../services/api';
+import { User, Award, MessageCircle, DollarSign, CreditCard as Edit3, Save, X, TrendingUp, CircleCheck as CheckCircle, Clock } from 'lucide-react';
 
 interface ProfileFormData {
   username: string;
@@ -25,38 +12,59 @@ interface ProfileFormData {
   bio: string;
 }
 
+interface UserProfile {
+  user: any;
+  recentQuestions: any[];
+  recentResponses: any[];
+}
+
+interface Achievement {
+  name: string;
+  description: string;
+  earned: boolean;
+  color: string;
+  icon: React.ComponentType<any>;
+}
+
 const ProfilePage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { setFlashMessage } = useApp();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [profileData, setProfileData] = useState<UserProfile | null>(null);
   const [formData, setFormData] = useState<ProfileFormData>({
     username: user?.username || '',
     email: user?.email || '',
-    bio: 'Passionate learner and problem solver. Love helping others grow in their tech journey.'
+    bio: ''
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  // Get user's activity data
-  const userQuestions = dummyQuestions.filter(q => q.authorId === user?.id);
-  const userResponses = dummyQuestions.flatMap(q => 
-    q.responses.filter(r => r.authorId === user?.id)
-  );
+  useEffect(() => {
+    fetchProfileData();
+  }, []);
 
-  const recentActivity = [
-    ...userQuestions.slice(0, 3).map(q => ({
-      type: 'question',
-      title: q.title,
-      date: q.createdAt,
-      credits: q.credits
-    })),
-    ...userResponses.slice(0, 3).map(r => ({
-      type: 'response',
-      title: `Answered: ${dummyQuestions.find(q => q.id === r.questionId)?.title}`,
-      date: r.createdAt,
-      credits: r.credits
-    }))
-  ].sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 5);
+  const fetchProfileData = async () => {
+    try {
+      setLoading(true);
+      const data = await apiService.getUserProfile();
+      setProfileData(data);
+      
+      // Update form data with fetched profile
+      setFormData({
+        username: data.user.username || '',
+        email: data.user.email || '',
+        bio: data.user.bio || ''
+      });
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      setFlashMessage({
+        type: 'error',
+        message: 'Failed to load profile data. Please try again.'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -91,58 +99,83 @@ const ProfilePage: React.FC = () => {
 
     setLoading(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setFlashMessage({
-      type: 'success',
-      message: 'Profile updated successfully!'
-    });
-    
-    setIsEditing(false);
-    setLoading(false);
+    try {
+      await apiService.updateUserProfile(formData);
+      
+      // Refresh user data
+      await refreshUser();
+      
+      // Refresh profile data
+      await fetchProfileData();
+      
+      setFlashMessage({
+        type: 'success',
+        message: 'Profile updated successfully!'
+      });
+      
+      setIsEditing(false);
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      setFlashMessage({
+        type: 'error',
+        message: error.message || 'Failed to update profile. Please try again.'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCancel = () => {
-    setFormData({
-      username: user?.username || '',
-      email: user?.email || '',
-      bio: 'Passionate learner and problem solver. Love helping others grow in their tech journey.'
-    });
+    if (profileData) {
+      setFormData({
+        username: profileData.user.username || '',
+        email: profileData.user.email || '',
+        bio: profileData.user.bio || ''
+      });
+    }
     setErrors({});
     setIsEditing(false);
   };
 
-  const achievements = [
+  const achievements: Achievement[] = [
     {
       icon: MessageCircle,
-      title: 'First Question',
+      name: 'First Question',
       description: 'Asked your first question',
-      earned: userQuestions.length > 0,
+      earned: (user?.questionsAsked || 0) > 0,
       color: 'text-blue-500'
     },
     {
       icon: CheckCircle,
-      title: 'Problem Solver',
+      name: 'Problem Solver',
       description: 'Had a question marked as solved',
-      earned: userQuestions.some(q => q.status === 'solved'),
+      earned: profileData?.recentQuestions.some(q => q.status === 'solved') || false,
       color: 'text-green-500'
     },
     {
       icon: Award,
-      title: 'Helpful Mentor',
+      name: 'Helpful Mentor',
       description: 'Provided 5+ helpful responses',
-      earned: userResponses.length >= 5,
+      earned: (user?.doubtsResolved || 0) >= 5,
       color: 'text-purple-500'
     },
     {
       icon: DollarSign,
-      title: 'Credit Collector',
+      name: 'Credit Collector',
       description: 'Earned 100+ credits',
       earned: (user?.credits || 0) >= 100,
       color: 'text-yellow-500'
     }
   ];
+
+  if (loading && !profileData) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <Navbar />
+        <LoadingSpinner size="lg" text="Loading profile..." />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -273,9 +306,12 @@ const ProfilePage: React.FC = () => {
                       onChange={handleChange}
                       rows={3}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-vertical"
+                      placeholder="Tell us about yourself..."
                     />
                   ) : (
-                    <p className="text-gray-700 dark:text-gray-300">{formData.bio}</p>
+                    <p className="text-gray-700 dark:text-gray-300">
+                      {formData.bio || 'No bio provided yet.'}
+                    </p>
                   )}
                 </div>
               </div>
@@ -287,24 +323,17 @@ const ProfilePage: React.FC = () => {
                 Recent Activity
               </h2>
               
-              {recentActivity.length === 0 ? (
-                <p className="text-gray-500 dark:text-gray-400 text-center py-4">
-                  No recent activity. Start asking questions or helping others!
-                </p>
-              ) : (
+              {profileData && (profileData.recentQuestions.length > 0 || profileData.recentResponses.length > 0) ? (
                 <div className="space-y-4">
-                  {recentActivity.map((activity, index) => (
-                    <div key={index} className="flex items-start space-x-3">
+                  {/* Recent Questions */}
+                  {profileData.recentQuestions.map((question) => (
+                    <div key={question._id} className="flex items-start space-x-3">
                       <div className="flex-shrink-0">
-                        {activity.type === 'question' ? (
-                          <MessageCircle className="w-5 h-5 text-blue-500 mt-0.5" />
-                        ) : (
-                          <CheckCircle className="w-5 h-5 text-green-500 mt-0.5" />
-                        )}
+                        <MessageCircle className="w-5 h-5 text-blue-500 mt-0.5" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-gray-900 dark:text-white font-medium">
-                          {activity.title}
+                          Asked: {question.title}
                         </p>
                         <div className="flex items-center space-x-4 mt-1">
                           <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -313,19 +342,51 @@ const ProfilePage: React.FC = () => {
                               day: 'numeric',
                               hour: '2-digit',
                               minute: '2-digit'
-                            }).format(activity.date)}
+                            }).format(new Date(question.createdAt))}
                           </p>
-                          {activity.credits && (
-                            <div className="flex items-center text-xs text-green-600 dark:text-green-400">
-                              <DollarSign className="w-3 h-3 mr-1" />
-                              {activity.credits} credits
-                            </div>
+                          <div className="flex items-center text-xs text-green-600 dark:text-green-400">
+                            <DollarSign className="w-3 h-3 mr-1" />
+                            {question.credits} credits
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Recent Responses */}
+                  {profileData.recentResponses.map((response) => (
+                    <div key={response._id} className="flex items-start space-x-3">
+                      <div className="flex-shrink-0">
+                        <CheckCircle className="w-5 h-5 text-green-500 mt-0.5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-gray-900 dark:text-white font-medium">
+                          Answered: {response.question?.title}
+                        </p>
+                        <div className="flex items-center space-x-4 mt-1">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {new Intl.DateTimeFormat('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            }).format(new Date(response.createdAt))}
+                          </p>
+                          {response.isHelpful && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300">
+                              <Award className="w-3 h-3 mr-1" />
+                              Helpful
+                            </span>
                           )}
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
+              ) : (
+                <p className="text-gray-500 dark:text-gray-400 text-center py-4">
+                  No recent activity. Start asking questions or helping others!
+                </p>
               )}
             </div>
 
@@ -355,7 +416,7 @@ const ProfilePage: React.FC = () => {
                             ? 'text-gray-900 dark:text-white' 
                             : 'text-gray-500 dark:text-gray-400'
                         }`}>
-                          {achievement.title}
+                          {achievement.name}
                         </h3>
                         <p className={`text-xs mt-1 ${
                           achievement.earned 

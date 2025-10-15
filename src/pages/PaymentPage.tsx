@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useApp } from '../contexts/AppContext';
 import Navbar from '../components/shared/Navbar';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
+import ApiService from '../services/api';
 import { 
   ArrowLeft,
   DollarSign,
@@ -57,25 +58,40 @@ const PaymentPage: React.FC = () => {
     
     try {
       // Simulate API call for payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Update user credits
-      const newCredits = user.credits - paymentData.amount;
-      updateUserCredits(newCredits);
-      
-      setFlashMessage({
-        type: 'success',
-        message: `Payment of ${paymentData.amount} credits sent successfully to ${paymentData.response.authorUsername}!`
-      });
-      
-      navigate(`/question/${questionId}`, { 
-        state: { paymentSuccess: true } 
-      });
+        console.log("Payment Data:", paymentData.amount); 
+        const payload = {
+        // questionId,
+        // responderId,
+        responseId: paymentData.response.id, 
+        amount: paymentData.amount,
+        // make sure response object has _id
+      };
+
+      const result = await ApiService.processPayment(payload);
+
+      // Backend should return updated user credits or success confirmation
+      if (result.success) {
+        // Update user credits locally
+        const newCredits = user.credits - paymentData.amount;
+        updateUserCredits(newCredits);
+
+        setFlashMessage({
+          type: 'success',
+          message: `Payment of ${paymentData.amount} credits sent successfully to ${paymentData.response.authorUsername}!`
+        });
+
+        navigate(`/question/${questionId}`, {
+          state: { paymentSuccess: true }
+        });
+      } else {
+        throw new Error(result.message || 'Payment failed');
+      }
     } catch (error) {
       setFlashMessage({
         type: 'error',
         message: 'Payment failed. Please try again.'
       });
+      console.error('Payment error:', error);
     } finally {
       setProcessingPayment(false);
     }

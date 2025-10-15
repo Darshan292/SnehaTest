@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useApp } from '../contexts/AppContext';
+import apiService from '../services/api';
 import Navbar from '../components/shared/Navbar';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
-import { HelpCircle, DollarSign, Tag } from 'lucide-react';
-import api from '../services/api';
+import { Circle as HelpCircle, DollarSign, Tag } from 'lucide-react';
 
 const AddQuestionPage: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -21,8 +21,6 @@ const AddQuestionPage: React.FC = () => {
   const { setFlashMessage } = useApp();
   const navigate = useNavigate();
 
-
-  
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -41,14 +39,14 @@ const AddQuestionPage: React.FC = () => {
 
     if (!formData.title.trim()) {
       newErrors.title = 'Title is required';
-    } else if (formData.title.length < 5) {
-      newErrors.title = 'Title must be at least 5 characters';
+    } else if (formData.title.length < 10) {
+      newErrors.title = 'Title must be at least 10 characters';
     }
 
     if (!formData.description.trim()) {
       newErrors.description = 'Description is required';
-    } else if (formData.description.length < 20) {
-      newErrors.description = 'Description must be at least 20 characters';
+    } else if (formData.description.length < 50) {
+      newErrors.description = 'Description must be at least 50 characters';
     }
 
     if (formData.credits < 5) {
@@ -68,26 +66,26 @@ const AddQuestionPage: React.FC = () => {
 
     setLoading(true);
     
-    // Simulate API call
     try {
       const questionData = {
-        ...formData,
-        tags: formData.tags
-          .split(',')
-          .map(tag => tag.trim())
-          .filter(tag => tag.length > 0),
+        title: formData.title,
+        description: formData.description,
+        credits: formData.credits,
+        tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag) : []
       };
-      const newQuestion = await api.createQuestion(questionData);
+
+      await apiService.createQuestion(questionData);
+      
       setFlashMessage({
         type: 'success',
         message: 'Your question has been posted successfully! The community will help you soon.',
       });
       
-      navigate(`/my-questions`);
+      navigate('/dashboard');
     } catch (error) {
       setFlashMessage({
         type: 'error',
-        message: 'Failed to post question. Please try again.',
+        message: error.message || 'Failed to post question. Please try again.',
       });
     } finally {
       setLoading(false);

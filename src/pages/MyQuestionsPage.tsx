@@ -1,88 +1,76 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useApp } from '../contexts/AppContext';
 import Navbar from '../components/shared/Navbar';
 import Modal from '../components/shared/Modal';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
-import { 
-  Plus,
-  Edit3,
-  Trash2,
-  CheckCircle,
-  Clock,
-  MessageCircle,
-  DollarSign,
-  AlertCircle,
-  Search
-} from 'lucide-react';
-import {  Question } from '../data/type';
-import api from '../services/api';
+import apiService from '../services/api';
+import { Plus, CreditCard as Edit3, Trash2, CircleCheck as CheckCircle, Clock, MessageCircle, DollarSign, CircleAlert as AlertCircle, Search } from 'lucide-react';
+
+interface Question {
+  _id: string;
+  title: string;
+  description: string;
+  credits: number;
+  author: {
+    _id: string;
+    username: string;
+    avatar?: string;
+  };
+  status: 'open' | 'solved' | 'closed';
+  tags: string[];
+  views: number;
+  createdAt: string;
+  updatedAt: string;
+  responseCount: number;
+}
 
 const MyQuestionsPage: React.FC = () => {
   const { user } = useAuth();
   const { setFlashMessage } = useApp();
-  const [questions, setQuestions] = useState<Question[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'solved' | 'closed'>('all');
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [loading, setLoading] = useState(true);
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; question: Question | null }>({
     isOpen: false,
     question: null
   });
-  const [loading, setLoading] = useState(false);
-  const [editTitle, setEditTitle] = useState('');
-  const [editDescription, setEditDescription] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
 
-  const [editModal, setEditModal] = useState<{ isOpen: boolean; question: Question | null }>({
-  isOpen: false,
-  question: null,
-});
-
-  
   useEffect(() => {
-    const fetchUserQuestions = async () => {
-      if (!user?.id) return;
+    if (user) {
+      fetchUserQuestions();
+    }
+  }, [user]);
+
+  const fetchUserQuestions = async () => {
+    try {
       setLoading(true);
-      try {
-        const data = await api.getUserQuestions(user.id);
-        console.log("data is", data)
-        const normalized = (data.questions || []).map((q: any) => ({
-        ...q,
-        createdAt: new Date(q.createdAt),
-      }));
-        setQuestions(normalized);
-      } catch (err) {
-        console.error('Failed to fetch user questions', err);
-        setFlashMessage({
-          type: 'error',
-          message: 'Failed to load your questions. Please try again.'
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserQuestions();
-  }, [user?.id]);
-
-  // Filter user's questions
-  const userQuestions = useMemo(() => {
-    return questions
-      .filter(q => {
-        const matchesSearch = q.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                              q.description.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesStatus = statusFilter === 'all' || q.status === statusFilter;
-        return matchesSearch && matchesStatus;
-      })
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [questions, searchQuery, statusFilter]);
-
-  const statusCounts = {
-    all: questions.length,
-    open: questions.filter(q => q.status === 'open').length,
-    solved: questions.filter(q => q.status === 'solved').length,
-    closed: questions.filter(q => q.status === 'closed').length,
+      const data = await apiService.getUserQuestions(user!.id, {
+        limit: 50
+      });
+      setQuestions(data.questions || []);
+    } catch (error) {
+      console.error('Error fetching user questions:', error);
+      setFlashMessage({
+        type: 'error',
+        message: 'Failed to load your questions. Please try again.'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const filteredQuestions = useMemo(() => {
+    return questions.filter(question => {
+      const matchesSearch = question.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          question.description.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || question.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [questions, searchQuery, statusFilter]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -111,90 +99,77 @@ const MyQuestionsPage: React.FC = () => {
   };
 
   const confirmDelete = async () => {
-  if (!deleteModal.question) return;
+    if (!deleteModal.question) return;
 
-  setLoading(true);
-  try {
-    await api.deleteQuestion(deleteModal.question.id); 
-    setQuestions(prev => prev.filter(q => q.id !== deleteModal.question?.id));
-
-    setFlashMessage({
-      type: 'success',
-      message: 'Question deleted successfully!'
-    });
-  } catch (err) {
-    console.error("Failed to delete question", err);
-    setFlashMessage({
-      type: 'error',
-      message: 'Failed to delete question. Please try again.'
-    });
-  } finally {
-    setDeleteModal({ isOpen: false, question: null });
-    setLoading(false);
-  }
-};
-
+    setActionLoading(true);
+    
+    try {
+      await apiService.deleteQuestion(deleteModal.question._id);
+      
+      // Remove question from local state
+      setQuestions(prev => prev.filter(q => q._id !== deleteModal.question!._id));
+      
+      setFlashMessage({
+        type: 'success',
+        message: 'Question deleted successfully!'
+      });
+      
+    } catch (error: any) {
+      console.error('Error deleting question:', error);
+      setFlashMessage({
+        type: 'error',
+        message: error.message || 'Failed to delete question. Please try again.'
+      });
+    } finally {
+      setActionLoading(false);
+      setDeleteModal({ isOpen: false, question: null });
+    }
+  };
 
   const handleMarkSolved = async (questionId: string) => {
-    setLoading(true);
+    setActionLoading(true);
+    
     try {
-      await api.markQuestionSolved(questionId);   
-      setQuestions(prev =>
-        prev.map(q => q.id === questionId ? { ...q, status: 'solved' } : q)
-      );
-
+      await apiService.markQuestionSolved(questionId);
+      
+      // Update question status in local state
+      setQuestions(prev => prev.map(q => 
+        q._id === questionId 
+          ? { ...q, status: 'solved' as const }
+          : q
+      ));
+      
       setFlashMessage({
         type: 'success',
         message: 'Question marked as solved!'
       });
-    } catch (err) {
-      console.error("Failed to mark solved", err);
+      
+    } catch (error: any) {
+      console.error('Error marking question as solved:', error);
       setFlashMessage({
         type: 'error',
-        message: 'Failed to mark question as solved. Please try again.'
+        message: error.message || 'Failed to mark question as solved.'
       });
     } finally {
-      setLoading(false);
+      setActionLoading(false);
     }
   };
 
-  const handleEditQuestion = async (questionId: string, updatedData: Partial<Question>) => {
-    console.log('Sending update data:', updatedData)
-    setLoading(true);
-    try {
-      const updated = await api.updateQuestion(questionId, updatedData);
-      setQuestions(prev =>
-        prev.map(q => q.id === questionId ? { ...q, ...updated } : q)
-      );
-
-      setFlashMessage({
-        type: 'success',
-        message: 'Question updated successfully!'
-      });
-    } catch (err) {
-      console.error("Failed to update question", err);
-      setFlashMessage({
-        type: 'error',
-        message: 'Failed to update question. Please try again.'
-      });
-    } finally {
-      setLoading(false);
-    }
+  const statusCounts = {
+    all: questions.length,
+    open: questions.filter(q => q.status === 'open').length,
+    solved: questions.filter(q => q.status === 'solved').length,
+    closed: questions.filter(q => q.status === 'closed').length,
   };
 
-  const openEditModal = (question: Question) => {
-    setEditModal({ isOpen: true, question });
-    setEditTitle(question.title);
-    setEditDescription(question.description);
-  };
-
-
-  // const statusCounts = {
-  //   all: userQuestions.length,
-  //   open: userQuestions.filter(q => q.status === 'open').length,
-  //   solved: userQuestions.filter(q => q.status === 'solved').length,
-  //   closed: userQuestions.filter(q => q.status === 'closed').length,
-  // };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <Navbar />
+        <LoadingSpinner size="lg" text="Loading your questions..." />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -272,7 +247,7 @@ const MyQuestionsPage: React.FC = () => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Credits Offered</p>
                 <p className="text-2xl font-semibold text-gray-900 dark:text-white">
-                  {userQuestions.reduce((sum, q) => sum + q.credits, 0)}
+                  {questions.reduce((sum, q) => sum + q.credits, 0)}
                 </p>
               </div>
             </div>
@@ -315,7 +290,7 @@ const MyQuestionsPage: React.FC = () => {
 
         {/* Questions List */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-          {userQuestions.length === 0 ? (
+          {filteredQuestions.length === 0 ? (
             <div className="p-6 text-center">
               <MessageCircle className="mx-auto h-12 w-12 text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
@@ -339,8 +314,8 @@ const MyQuestionsPage: React.FC = () => {
             </div>
           ) : (
             <div className="divide-y divide-gray-200 dark:divide-gray-700">
-              {userQuestions.map((question) => (
-                <div key={question.id} className="p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+              {filteredQuestions.map((question) => (
+                <div key={question._id} className="p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2">
@@ -360,7 +335,7 @@ const MyQuestionsPage: React.FC = () => {
                       </div>
 
                       <Link 
-                        to={`/question/${question.id}`}
+                        to={`/question/${question._id}`}
                         className="block group mb-2"
                       >
                         <h3 className="text-lg font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1">
@@ -379,11 +354,11 @@ const MyQuestionsPage: React.FC = () => {
                             day: 'numeric',
                             hour: '2-digit',
                             minute: '2-digit'
-                          }).format(question.createdAt)}
+                          }).format(new Date(question.createdAt))}
                         </div>
                         <div className="flex items-center">
                           <MessageCircle className="w-4 h-4 mr-1" />
-                          {question.responses?.length ?? question.responseCount ?? 0} responses
+                          {question.responseCount || 0} responses
                         </div>
                         <div className="flex items-center">
                           <DollarSign className="w-4 h-4 mr-1" />
@@ -395,16 +370,15 @@ const MyQuestionsPage: React.FC = () => {
                     <div className="flex items-start space-x-2 ml-4">
                       {question.status === 'open' && (
                         <button
-                          onClick={() => handleMarkSolved(question.id)}
-                          disabled={loading}
-                          className="p-2 text-green-600 hover:text-green-800 hover:bg-green-100 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+                          onClick={() => handleMarkSolved(question._id)}
+                          disabled={actionLoading}
+                          className="p-2 text-green-600 hover:text-green-800 hover:bg-green-100 dark:hover:bg-green-900/20 rounded-lg transition-colors disabled:opacity-50"
                           title="Mark as solved"
                         >
                           <CheckCircle className="w-4 h-4" />
                         </button>
                       )}
                       <button
-                        onClick={() =>openEditModal(question)}
                         className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                         title="Edit question"
                       >
@@ -412,7 +386,8 @@ const MyQuestionsPage: React.FC = () => {
                       </button>
                       <button
                         onClick={() => handleDeleteQuestion(question)}
-                        className="p-2 text-red-600 hover:text-red-800 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        disabled={actionLoading}
+                        className="p-2 text-red-600 hover:text-red-800 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50"
                         title="Delete question"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -425,54 +400,6 @@ const MyQuestionsPage: React.FC = () => {
           )}
         </div>
       </div>
-      <Modal
-        isOpen={editModal.isOpen}
-        onClose={() => setEditModal({ isOpen: false, question: null })}
-        title="Edit Question"
-      >
-        {editModal.question && (
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              if (!editModal.question) return;
-              await handleEditQuestion(editModal.question.id, {
-                title: editTitle,
-                description: editDescription,
-              });
-              setEditModal({ isOpen: false, question: null });
-            }}
-            className="space-y-4"
-          >
-            <input
-              name="title"
-              defaultValue={editModal.question.title}
-              onChange={(e) => setEditTitle(e.target.value)}
-              className="w-full border px-3 py-2 rounded-lg"
-            />
-            <textarea
-              name="description"
-              defaultValue={editModal.question.description}
-              onChange={(e) => setEditDescription(e.target.value)}
-              className="w-full border px-3 py-2 rounded-lg"
-            />
-            <div className="flex justify-end space-x-3">
-              <button
-                type="button"
-                onClick={() => setEditModal({ isOpen: false, question: null })}
-                className="px-4 py-2 text-gray-600"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg"
-              >
-                Save
-              </button>
-            </div>
-          </form>
-        )}
-      </Modal>
 
       {/* Delete Confirmation Modal */}
       <Modal
@@ -503,16 +430,16 @@ const MyQuestionsPage: React.FC = () => {
             <button
               onClick={() => setDeleteModal({ isOpen: false, question: null })}
               className="px-4 py-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
-              disabled={loading}
+              disabled={actionLoading}
             >
               Cancel
             </button>
             <button
               onClick={confirmDelete}
-              disabled={loading}
+              disabled={actionLoading}
               className="px-6 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-lg font-medium transition-colors disabled:cursor-not-allowed flex items-center"
             >
-              {loading ? (
+              {actionLoading ? (
                 <>
                   <LoadingSpinner size="sm" text="" />
                   <span className="ml-2">Deleting...</span>
