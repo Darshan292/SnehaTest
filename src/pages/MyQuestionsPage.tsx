@@ -5,6 +5,7 @@ import { useApp } from '../contexts/AppContext';
 import Navbar from '../components/shared/Navbar';
 import Modal from '../components/shared/Modal';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
+import question1 from '../images/question.png';
 import apiService from '../services/api';
 import { Plus, CreditCard as Edit3, Trash2, CircleCheck as CheckCircle, Clock, MessageCircle, DollarSign, CircleAlert as AlertCircle, Search } from 'lucide-react';
 
@@ -177,7 +178,14 @@ const MyQuestionsPage: React.FC = () => {
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 ">
+          
+          <div className='flex flex-row items-center'>
+            <img
+            src={question1}   /* put your image in public/images/ */
+            alt="My questions"
+            className="w-40 object-contain"
+          />
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
               My Questions
@@ -185,6 +193,7 @@ const MyQuestionsPage: React.FC = () => {
             <p className="text-gray-600 dark:text-gray-400 mt-1">
               Manage all the questions you've asked
             </p>
+          </div>
           </div>
           <Link
             to="/add-question"

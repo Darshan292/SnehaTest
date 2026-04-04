@@ -6,6 +6,8 @@ import Navbar from '../components/shared/Navbar';
 import FlashMessage from '../components/shared/FlashMessage';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 import apiService from '../services/api';
+import dashboard from '../images/Dashboard.png'
+import recenquestionsImage from '../images/Recentque.png';
 import { Plus, Clock, DollarSign, User, CircleCheck as CheckCircle, CircleAlert as AlertCircle, TrendingUp, MessageCircle } from 'lucide-react';
 
 interface Question {
@@ -95,7 +97,7 @@ const DashboardPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-200 dark:bg-gray-900">
       <Navbar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
       <FlashMessage />
       
@@ -104,18 +106,32 @@ const DashboardPage: React.FC = () => {
           {/* Main Content */}
           <div className="flex-1">
             {/* Welcome Header */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                Welcome back, {user?.username}! 👋
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400">
-                Ready to help others learn or ask your next question?
-              </p>
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg shadow-sm px-6 py-2 mb-6">
+              <div className="flex items-start justify-between ">
+                {/* Left side: Text content */}
+                <div className="flex-1 my-auto">
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white ">
+                    Welcome back, {user?.username}! 👋
+                  </h1>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Ready to help others learn or ask your next question?
+                  </p>
+                </div>
+
+                {/* Right side: Image */}
+                <div className="flex-shrink-0">
+                  <img
+                    src={dashboard} // Replace with your actual image URL
+                    alt="Welcome illustration"
+                    className="w-full h-44 object-cover"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg shadow-sm p-6">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
                     <DollarSign className="h-8 w-8 text-green-500" />
@@ -129,7 +145,7 @@ const DashboardPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg shadow-sm p-6">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
                     <MessageCircle className="h-8 w-8 text-blue-500" />
@@ -143,7 +159,7 @@ const DashboardPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg shadow-sm p-6">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
                     <TrendingUp className="h-8 w-8 text-purple-500" />
@@ -159,7 +175,7 @@ const DashboardPage: React.FC = () => {
             </div>
 
             {/* Filters */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 mb-6">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg shadow-sm p-4 mb-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center space-x-4">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -168,7 +184,7 @@ const DashboardPage: React.FC = () => {
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value as any)}
-                    className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                    className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                   >
                     <option value="all">All Questions</option>
                     <option value="open">Open</option>
@@ -184,7 +200,7 @@ const DashboardPage: React.FC = () => {
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as any)}
-                    className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                    className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                   >
                     <option value="newest">Newest</option>
                     <option value="oldest">Oldest</option>
@@ -196,16 +212,29 @@ const DashboardPage: React.FC = () => {
             </div>
 
             {/* Questions List */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Recent Questions
-                </h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  {filteredQuestions.length} questions found
-                  {searchQuery && ` for "${searchQuery}"`}
-                </p>
-              </div>
+           <div className="bg-gray-50 dark:bg-gray-800 rounded-lg shadow-sm">
+                <div className="px-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                  
+                  {/* Left: Text */}
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                      Recent Questions
+                    </h2>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      {filteredQuestions.length} questions found
+                      {searchQuery && ` for "${searchQuery}"`}
+                    </p>
+                  </div>
+
+                  {/* Right: Image - pushed to edge */}
+                  <div className="flex-shrink-0 mr-auto">
+                    <img
+                      src={recenquestionsImage} // your imported image
+                      alt="Recent questions"
+                      className="w-full h-24 object-contain"
+                    />
+                  </div>
+                </div>
 
               {loading ? (
                 <LoadingSpinner size="md" text="Loading questions..." />
@@ -307,7 +336,7 @@ const DashboardPage: React.FC = () => {
           {/* Sidebar */}
           <div className="w-full lg:w-80 space-y-6">
             {/* Quick Actions */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg shadow-sm p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 Quick Actions
               </h3>
@@ -335,7 +364,7 @@ const DashboardPage: React.FC = () => {
             </div>
 
             {/* Activity Feed */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg shadow-sm p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 Recent Activity
               </h3>

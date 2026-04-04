@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/shared/Navbar';
 import Footer from '../components/shared/Footer';
+import land from '../images/landing.png'; // put your image in public/images/
 import { 
   HelpCircle, 
   Users, 
@@ -54,10 +55,15 @@ const LandingPage: React.FC = () => {
       <section className="relative py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
           <div className="mb-8">
-            <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
+            <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white">
               Solve doubts, earn credits,
               <span className="text-blue-600 block">grow together.</span>
             </h1>
+            <img
+              src={land}
+              alt="Four friends learning together"
+              className="w-80 object-contain  dark:bg-gray-800 mx-auto mb-4"
+            />
             <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8">
               Join the ultimate peer-to-peer learning platform where knowledge sharing is rewarded 
               and every question leads to growth.
@@ -79,9 +85,11 @@ const LandingPage: React.FC = () => {
               Explore Platform
             </Link>
           </div>
+          
 
           {/* Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
+            
             <div className="text-center">
               <div className="text-3xl font-bold text-blue-600 mb-2">10K+</div>
               <div className="text-gray-600 dark:text-gray-400">Questions Answered</div>
@@ -180,7 +188,7 @@ const LandingPage: React.FC = () => {
                 <div className="flex items-center">
                   <Heart className="w-5 h-5 text-red-500 mr-2" />
                   <span className="text-gray-600 dark:text-gray-400">
-                    Join 5,000+ learners helping each other grow
+                    Join other learners helping each other grow
                   </span>
                 </div>
               </div>

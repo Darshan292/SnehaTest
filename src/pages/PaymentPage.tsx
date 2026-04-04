@@ -31,17 +31,56 @@ const PaymentPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [paymentData, setPaymentData] = useState<PaymentState | null>(null);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [alreadyPaid, setAlreadyPaid] = useState(false);
 
   useEffect(() => {
-    // Get payment data from location state or fetch from API
-    const state = location.state as PaymentState;
-    if (state) {
-      setPaymentData(state);
-    } else {
-      // If no state, redirect back to dashboard
-      navigate('/dashboard');
-    }
-  }, [location.state, navigate]);
+    const initPaymentData = async () => {
+      const state = location.state as PaymentState;
+      if (state) {
+        setPaymentData(state);
+        return;
+      }
+
+      // No state: Fetch from API using params
+      setLoading(true);
+      try {
+        const fetchedData = await ApiService.fetchPaymentDetails({  // Assume you add this API method
+          questionId,
+          responderId,
+        });
+
+        if (fetchedData.alreadyPaid) {  // Backend flag: e.g., { alreadyPaid: true, message: 'Payment completed' }
+          setAlreadyPaid(true);
+          setFlashMessage({
+            type: 'success',
+            message: fetchedData.message || 'Payment already completed!'
+          });
+          // Redirect after setting flash
+          const timer = setTimeout(() => {
+            navigate('/dashboard', { state: { paymentSuccess: true } });
+          }, 100);
+          return () => clearTimeout(timer);
+        }
+
+        if (!fetchedData) {
+          throw new Error('Payment details not found');
+        }
+
+        setPaymentData(fetchedData);  // { question, response, amount }
+      } catch (error) {
+        setFlashMessage({
+          type: 'error',
+          message: 'Payment details could not be loaded.'
+        });
+        navigate('/dashboard');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initPaymentData();
+  }, [location.state, questionId, responderId, navigate, setFlashMessage]);
 
   const handlePayment = async () => {
     if (!paymentData || !user) return;
@@ -66,11 +105,12 @@ const PaymentPage: React.FC = () => {
       };
 
       const result = await ApiService.processPayment(payload);
+      console.log('Payment result:', result);  // Log the full API response for debugging
 
-      // Backend should return updated user credits or success confirmation
-      if (result.success) {
-        // Update user credits locally
-        const newCredits = user.credits - paymentData.amount;
+      // More flexible success check: Handles if backend doesn't set success: true but message indicates success
+      if (result.success || result.status === 'success' || (result.message && result.message.toLowerCase().includes('success'))) {
+        // Update user credits locally (use backend value if provided)
+        const newCredits = result.updatedCredits || (user.credits - paymentData.amount);
         updateUserCredits(newCredits);
 
         setFlashMessage({
@@ -78,12 +118,13 @@ const PaymentPage: React.FC = () => {
           message: `Payment of ${paymentData.amount} credits sent successfully to ${paymentData.response.authorUsername}! The question has been marked as solved.`
         });
 
-        // Redirect to homepage
-        navigate('/dashboard', {
-          state: { paymentSuccess: true }
-        });
+        // Set success flag
+        setPaymentSuccess(true);
+        setProcessingPayment(false);  // Move here
+        return;
       } else {
-        throw new Error(result.message || 'Payment failed');
+        console.warn('Payment not successful, details:', result);  // Log warning for non-success
+        throw new Error(result.message || result.error || 'Payment failed');
       }
     } catch (error) {
       setFlashMessage({
@@ -92,15 +133,52 @@ const PaymentPage: React.FC = () => {
       });
       console.error('Payment error:', error);
     } finally {
-      setProcessingPayment(false);
+      if (!paymentSuccess) {
+        setProcessingPayment(false);
+      }
     }
   };
+
+  useEffect(() => {
+    if (paymentSuccess) {
+      // Small delay to let contexts re-render
+      const timer = setTimeout(() => {
+        navigate('/dashboard', {  // Changed to /dashboard as per your request
+          state: { paymentSuccess: true }
+        });
+      }, 100);  // 100ms is usually enough; adjust if needed
+
+      return () => clearTimeout(timer);
+    }
+  }, [paymentSuccess, navigate]);
+
+  if (loading || (!paymentData && !alreadyPaid)) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <Navbar />
+        <LoadingSpinner size="lg" text="Loading payment details..." />
+      </div>
+    );
+  }
+
+  if (alreadyPaid) {
+    return <SuccessView />;
+  }
 
   if (!paymentData) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <Navbar />
-        <LoadingSpinner size="lg" text="Loading payment details..." />
+        <div className="max-w-2xl mx-auto px-4 py-8">
+          <div className="bg-red-50 rounded-lg p-6 text-center">
+            <AlertTriangle className="w-12 h-12 text-red-600 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-red-800 mb-2">Payment Not Found</h1>
+            <p className="text-gray-600">Unable to load payment details. Please try again later.</p>
+            <button onClick={() => navigate('/dashboard')} className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg">
+              Go to Dashboard
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -285,6 +363,26 @@ const PaymentPage: React.FC = () => {
             Payments are used to thank community members for helpful responses. 
             If you have any issues with this payment, please contact our support team.
           </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const SuccessView: React.FC = () => {
+  const navigate = useNavigate();
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <Navbar />
+      <div className="max-w-2xl mx-auto px-4 py-8">
+        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-6 text-center">
+          <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-green-800 dark:text-green-200 mb-2">Payment Successful!</h1>
+          <p className="text-gray-600 dark:text-gray-400">Thanks for supporting the community. Question marked as solved.</p>
+          <button onClick={() => navigate('/dashboard')} className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg">
+            Go to Dashboard
+          </button>
         </div>
       </div>
     </div>

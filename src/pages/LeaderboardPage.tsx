@@ -4,6 +4,7 @@ import { useApp } from '../contexts/AppContext';
 import Navbar from '../components/shared/Navbar';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 import apiService from '../services/api';
+import leaderboardimg from '../images/leaderboard.png'; 
 import { Trophy, Medal, Award, User, TrendingUp, Calendar, ListFilter as Filter, Crown, Star } from 'lucide-react';
 
 interface LeaderboardUser {
@@ -108,45 +109,59 @@ const LeaderboardPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-200 dark:bg-gray-900">
       <Navbar />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <div className="flex items-center justify-center mb-4">
-            <Trophy className="w-10 h-10 text-yellow-500 mr-3" />
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-              Leaderboard
-            </h1>
+
+        {/* HERO: TEXT LEFT | FULL PODIUM IMAGE RIGHT */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12 items-center mb-12 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-2xl p-6 lg:p-10 shadow-lg">
+          
+          {/* LEFT: Text */}
+
+          {/* RIGHT: Full Podium Image */}
+          <div className="flex lg:col-span-1 justify-center lg:justify-start">
+            <img
+              src={leaderboardimg}
+              alt="Top 3 winners on podium"
+              className="w-full max-w-sm lg:max-w-64 h-auto object-contain"
+            />
           </div>
-          <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-            Celebrating our top contributors who make the learning community thrive
-          </p>
-          {currentUserRank && (
-            <div className="mt-4 inline-flex items-center px-4 py-2 bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 rounded-full">
-              <Star className="w-4 h-4 mr-2" />
-              You're ranked #{currentUserRank}
+          <div className="text-center lg:text-left lg:col-span-2">
+            <div className="flex items-center justify-center lg:justify-start mb-4">
+              <Trophy className="w-10 h-10 text-yellow-500 mr-3" />
+              <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
+                Leaderboard
+              </h1>
             </div>
-          )}
+            <p className="text-lg text-gray-700 dark:text-gray-300 max-w-lg mx-auto lg:mx-0">
+              Celebrating our top contributors who make the learning community thrive
+            </p>
+            {currentUserRank && (
+              <div className="mt-6 inline-flex items-center px-5 py-2.5 bg-blue-600 text-white rounded-full shadow-md">
+                <Star className="w-5 h-5 mr-2" />
+                <span className="font-semibold">You're ranked #{currentUserRank}</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Stats Cards */}
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 text-center">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg shadow-sm p-6 text-center transform hover:scale-105 transition-transform">
               <div className="text-3xl font-bold text-blue-600 mb-2">{stats.totalUsers}</div>
               <div className="text-gray-600 dark:text-gray-400">Total Users</div>
             </div>
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 text-center">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg shadow-sm p-6 text-center transform hover:scale-105 transition-transform">
               <div className="text-3xl font-bold text-green-600 mb-2">{stats.totalQuestions}</div>
               <div className="text-gray-600 dark:text-gray-400">Questions Asked</div>
             </div>
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 text-center">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg shadow-sm p-6 text-center transform hover:scale-105 transition-transform">
               <div className="text-3xl font-bold text-purple-600 mb-2">{stats.totalResponses}</div>
               <div className="text-gray-600 dark:text-gray-400">Responses Given</div>
             </div>
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 text-center">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg shadow-sm p-6 text-center transform hover:scale-105 transition-transform">
               <div className="text-3xl font-bold text-yellow-600 mb-2">{stats.totalCreditsCirculated}</div>
               <div className="text-gray-600 dark:text-gray-400">Credits in Circulation</div>
             </div>
@@ -155,7 +170,6 @@ const LeaderboardPage: React.FC = () => {
 
         {/* Filters */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-          {/* Time Filter */}
           <div className="flex items-center space-x-2">
             <Calendar className="w-5 h-5 text-gray-500" />
             <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
@@ -165,7 +179,7 @@ const LeaderboardPage: React.FC = () => {
                   onClick={() => setTimeFilter(period)}
                   className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
                     timeFilter === period
-                      ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
+                      ? 'bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
                       : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
                   }`}
                 >
@@ -175,13 +189,12 @@ const LeaderboardPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Sort Filter */}
           <div className="flex items-center space-x-2">
             <Filter className="w-5 h-5 text-gray-500" />
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as 'credits' | 'questions' | 'resolved')}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="credits">Sort by Credits</option>
               <option value="questions">Sort by Questions Asked</option>
@@ -204,14 +217,14 @@ const LeaderboardPage: React.FC = () => {
                     actualRank === 1 ? 'md:order-2' : actualRank === 2 ? 'md:order-1' : 'md:order-3'
                   } ${actualRank === 1 ? 'transform md:-translate-y-4' : ''}`}
                 >
-                  <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden border-4 ${
+                  <div className={`bg-gray-50 dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden border-4 ${
                     actualRank === 1 
                       ? 'border-yellow-400' 
                       : actualRank === 2 
                       ? 'border-gray-400' 
                       : 'border-amber-400'
-                  } ${isCurrentUser ? 'ring-4 ring-blue-400' : ''}`}>
-                    {/* Rank Badge */}
+                  } ${isCurrentUser ? 'ring-4 ring-blue-400 ring-offset-2' : ''}`}>
+                    
                     <div className={`text-center py-4 ${getRankBadgeColor(actualRank)}`}>
                       <div className="flex items-center justify-center mb-2">
                         {getRankIcon(actualRank)}
@@ -219,16 +232,15 @@ const LeaderboardPage: React.FC = () => {
                       <div className="text-2xl font-bold">#{actualRank}</div>
                     </div>
 
-                    {/* User Info */}
                     <div className="p-6 text-center">
-                      <div className="w-16 h-16 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <User className="w-8 h-8 text-gray-600 dark:text-gray-300" />
+                      <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
+                        <User className="w-9 h-9 text-white" />
                       </div>
                       
                       <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
                         {leader.username}
                         {isCurrentUser && (
-                          <span className="ml-2 text-sm text-blue-600 dark:text-blue-400">(You)</span>
+                          <span className="ml-2 text-sm text-blue-600 dark:text-blue-400 font-medium">(You)</span>
                         )}
                       </h3>
 
@@ -251,7 +263,7 @@ const LeaderboardPage: React.FC = () => {
 
         {/* Remaining Rankings */}
         {remaining.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                 Full Rankings
@@ -266,7 +278,7 @@ const LeaderboardPage: React.FC = () => {
                   <div
                     key={leader._id}
                     className={`p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${
-                      isCurrentUser ? 'bg-blue-50 dark:bg-blue-900/10 border-l-4 border-blue-400' : ''
+                      isCurrentUser ? 'bg-blue-50 dark:bg-blue-900/10 border-l-4 border-blue-500' : ''
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -277,8 +289,8 @@ const LeaderboardPage: React.FC = () => {
                           </span>
                         </div>
                         
-                        <div className="w-12 h-12 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center">
-                          <User className="w-6 h-6 text-gray-600 dark:text-gray-300" />
+                        <div className="w-12 h-12 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center shadow-sm">
+                          <User className="w-6 h-6 text-white" />
                         </div>
                         
                         <div>
@@ -325,6 +337,7 @@ const LeaderboardPage: React.FC = () => {
           </div>
         )}
 
+        {/* Empty State */}
         {leaderboard.length === 0 && !loading && (
           <div className="text-center py-12">
             <Trophy className="mx-auto h-12 w-12 text-gray-400 mb-4" />
@@ -338,7 +351,7 @@ const LeaderboardPage: React.FC = () => {
         )}
 
         {/* Achievement Explanation */}
-        <div className="mt-12 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl p-8">
+        <div className="mt-12 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl p-8 shadow-md">
           <div className="text-center">
             <TrendingUp className="w-10 h-10 text-blue-600 dark:text-blue-400 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">

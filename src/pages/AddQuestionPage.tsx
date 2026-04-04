@@ -5,6 +5,7 @@ import { useApp } from '../contexts/AppContext';
 import apiService from '../services/api';
 import Navbar from '../components/shared/Navbar';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
+import question from '../images/question2.png';
 import { Circle as HelpCircle, DollarSign, Tag } from 'lucide-react';
 
 const AddQuestionPage: React.FC = () => {
@@ -95,24 +96,43 @@ const AddQuestionPage: React.FC = () => {
   const suggestedCredits = [10, 25, 50, 75, 100];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Navbar />
-      
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center">
-              <HelpCircle className="w-6 h-6 text-blue-600 mr-3" />
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Ask a Question
-              </h1>
-            </div>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">
-              Get help from the community by asking a detailed question
-            </p>
-          </div>
+    <div className="min-h-screen bg-gray-200 dark:bg-gray-900">
+  <Navbar />
 
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    {/* Grid: Left = Image, Right = Form */}
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
+      
+      {/* Left: Background Image */}
+      <div className="hidden lg:block lg:col-span-1 relative rounded-xl overflow-hidden shadow-lg h-96 w-full">
+        <img
+          src={question} // Put your image in public/images/
+          alt="Ask a question illustration"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+        <div className="absolute bottom-8 left-8 text-white">
+          <h2 className="text-3xl font-bold">Need Help?</h2>
+          <p className="text-lg mt-2">Ask the community — get answers fast.</p>
+        </div>
+      </div>
+
+      {/* Right: Form Card */}
+      <div className="bg-gray-50 lg:col-span-3 dark:bg-gray-800 rounded-lg shadow-sm">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center">
+            <HelpCircle className="1-6 h-6 text-blue-600 mr-3" />
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Ask a Question
+            </h1>
+          </div>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">
+            Get help from the community by asking a detailed question
+          </p>
+        </div>
+
+        {/* === Your existing form goes here === */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
             {/* Title */}
             <div>
               <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -287,9 +307,10 @@ const AddQuestionPage: React.FC = () => {
               </button>
             </div>
           </form>
-        </div>
       </div>
     </div>
+  </div>
+</div>
   );
 };
 

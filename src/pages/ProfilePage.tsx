@@ -170,7 +170,7 @@ const ProfilePage: React.FC = () => {
 
   if (loading && !profileData) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
         <Navbar />
         <LoadingSpinner size="lg" text="Loading profile..." />
       </div>
@@ -178,17 +178,17 @@ const ProfilePage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       <Navbar />
       
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Profile Header */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden mb-6">
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden mb-6">
           <div className="bg-gradient-to-r from-blue-500 to-purple-600 h-32"></div>
           <div className="px-6 py-4">
             <div className="flex items-start justify-between">
               <div className="flex items-center">
-                <div className="w-20 h-20 bg-white dark:bg-gray-700 rounded-full flex items-center justify-center -mt-10 border-4 border-white dark:border-gray-800">
+                <div className="w-20 h-20 bg-gray-50 dark:bg-gray-700 rounded-full flex items-center justify-center -mt-10 border-4 border-white dark:border-gray-800">
                   <User className="w-10 h-10 text-gray-600 dark:text-gray-300" />
                 </div>
                 <div className="ml-4">
@@ -219,7 +219,7 @@ const ProfilePage: React.FC = () => {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Profile Information */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg shadow-sm p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                   Profile Information
@@ -318,7 +318,7 @@ const ProfilePage: React.FC = () => {
             </div>
 
             {/* Recent Activity */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg shadow-sm p-6">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 Recent Activity
               </h2>
@@ -391,7 +391,7 @@ const ProfilePage: React.FC = () => {
             </div>
 
             {/* Achievements */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg shadow-sm p-6">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 Achievements
               </h2>
@@ -442,7 +442,7 @@ const ProfilePage: React.FC = () => {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Stats */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg shadow-sm p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 Your Stats
               </h3>
@@ -481,7 +481,7 @@ const ProfilePage: React.FC = () => {
             </div>
 
             {/* Quick Actions */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg shadow-sm p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 Quick Actions
               </h3>

@@ -194,7 +194,7 @@ router.post('/', [
     await question.save();
 
     // Deduct credits from user and increment questions asked
-    user.credits -= credits;
+    // user.credits -= credits;
     user.questionsAsked += 1;
     await user.save();
 
